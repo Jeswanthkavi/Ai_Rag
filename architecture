@@ -1,0 +1,48 @@
+ai-document-assistant/
+│
+├── backend/
+│   │
+│   ├── app/
+│   │   ├── main.py
+│   │   │
+│   │   ├── api/
+│   │   │   ├── auth.py
+│   │   │   ├── documents.py
+│   │   │   └── chat.py
+│   │   │
+│   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   └── security.py
+│   │   │
+│   │   ├── models/
+│   │   │   ├── user.py
+│   │   │   ├── document.py
+│   │   │   └── chat.py
+│   │   │
+│   │   ├── schemas/
+│   │   │   ├── auth.py
+│   │   │   ├── document.py
+│   │   │   └── chat.py
+│   │   │
+│   │   ├── services/
+│   │   │   ├── document_service.py
+│   │   │   ├── embedding_service.py
+│   │   │   ├── retrieval_service.py
+│   │   │   └── llm_service.py
+│   │   │
+│   │   ├── db/
+│   │   │   ├── database.py
+│   │   │   └── repositories/
+│   │   │
+│   │   └── utils/
+│   │
+│   └── requirements.txt
+│
+├── frontend/
+│   └── ...
+│
+├── storage/
+│
+├── docker-compose.yml
+│
+└── .env

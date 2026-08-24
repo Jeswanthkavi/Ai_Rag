@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic-settings
+pymupdf
+sentence-transformers
+google-genai
+qdrant-client
+python-multipart
+sqlalchemy
+pymysql
+python-jose[cryptography]
+passlib[bcrypt]
+bcrypt==3.1.7
+email-validator

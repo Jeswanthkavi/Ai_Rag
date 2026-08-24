@@ -1,0 +1,9 @@
+venv/
+.env
+__pycache__/
+*.pyc
+vectorstore/
+.vscode/
+
+
+40b99767-bcb9-48cb-b50b-2ca4153f8376
