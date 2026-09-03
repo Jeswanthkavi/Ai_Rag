@@ -31,4 +31,4 @@ class EmbeddingService:
 
     def get_dimension(self):
 
-        return self.model.get_sentence_embedding_dimension()
+        return self.model.get_embedding_dimension()

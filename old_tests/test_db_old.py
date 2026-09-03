@@ -1,5 +1,5 @@
-from app.database import SessionLocal
-from app.services.user_service import create_user
+from backend.app.database import SessionLocal
+from backend.app.services.user_service import create_user
 
 
 db = SessionLocal()

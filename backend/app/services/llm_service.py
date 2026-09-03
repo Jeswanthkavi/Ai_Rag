@@ -6,48 +6,27 @@ class LLMService:
     def __init__(
         self,
         api_key: str,
-        model: str
+        model_name: str,
     ):
 
         self.client = genai.Client(
             api_key=api_key
         )
 
-        self.model = model
+        self.model_name = (
+            model_name
+        )
+
+    # =====================================================
+    # GENERATE ANSWER
+    # =====================================================
 
     def generate_answer(
         self,
         question: str,
-        results,
-        history=None
+        context: str,
+        history=None,
     ):
-
-        # --------------------------------
-        # Retrieved context
-        # --------------------------------
-
-        context_parts = []
-
-        for result in results:
-
-            payload = result.payload
-
-            context_parts.append(
-                f"""
-Source: {payload['filename']}
-Page: {payload['page']}
-
-{payload['text']}
-"""
-            )
-
-        context = "\n\n".join(
-            context_parts
-        )
-
-        # --------------------------------
-        # Conversation history
-        # --------------------------------
 
         history_text = ""
 
@@ -57,59 +36,67 @@ Page: {payload['page']}
 
             for message in history:
 
-                history_parts.append(
-                    f"{message.role.upper()}: "
-                    f"{message.content}"
+                role = message.role
+
+                content = (
+                    message.content
                 )
 
-            history_text = "\n".join(
-                history_parts
+                history_parts.append(
+
+                    f"{role}: {content}"
+                )
+
+            history_text = (
+                "\n".join(
+                    history_parts
+                )
             )
 
-        # --------------------------------
-        # Prompt
-        # --------------------------------
-
         prompt = f"""
-You are an AI document assistant.
+You are a document question-answering assistant.
 
-Use the retrieved document context to answer
-the user's question.
+Your job is to answer the user's question
+using ONLY the provided document context.
 
-You may use the conversation history to
-understand references such as:
-"it", "that", "the second one", etc.
+IMPORTANT RULES:
 
-Rules:
-
-1. Use the document context as the factual
-   source.
-2. Do not invent information.
+1. Use only information present in the context.
+2. Do not invent facts.
 3. Do not use outside knowledge.
-4. If the answer cannot be found in the
-   document context, say that you could not
-   find it in the uploaded document.
-5. Keep the answer clear and concise.
+4. If the answer cannot be found in the context,
+   clearly say that the information is not available
+   in the provided document.
+5. Keep the answer directly related to the question.
+6. When useful, mention the relevant page number.
+7. Do not claim something is present in the document
+   unless the context supports it.
 
-Conversation History:
-----------------
+CONVERSATION HISTORY:
+
 {history_text}
-----------------
 
-Document Context:
-----------------
+DOCUMENT CONTEXT:
+
 {context}
-----------------
 
-Current Question:
+USER QUESTION:
+
 {question}
 
-Answer:
+ANSWER:
 """
 
-        response = self.client.models.generate_content(
-            model=self.model,
-            contents=prompt
+        response = (
+            self.client
+            .models
+            .generate_content(
+
+                model=
+                    self.model_name,
+
+                contents=prompt,
+            )
         )
 
         return response.text

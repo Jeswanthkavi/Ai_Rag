@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import (
     String,
     DateTime,
@@ -9,8 +11,6 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship
 )
-
-from datetime import datetime
 
 from app.database import Base
 
@@ -42,6 +42,12 @@ class Document(Base):
 
     file_path: Mapped[str] = mapped_column(
         String(500),
+        nullable=False
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(30),
+        default="processing",
         nullable=False
     )
 

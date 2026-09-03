@@ -1,53 +1,211 @@
-import faiss
-import numpy as np
-
+from typing import List, Dict, Any
+from app.utils.logger import logger
 
 class RetrievalService:
 
-    def __init__(self, embedding_service):
-        self.embedding_service = embedding_service
-        self.index = None
-        self.chunks = []
+    def __init__(
+        self,
+        vector_service,
+        embedding_service,
+        reranker_service,
+        query_service,
+    ):
 
-    def build_index(self, chunks):
-        self.chunks = chunks
-
-        texts = [chunk["text"] for chunk in chunks]
-
-        vectors = self.embedding_service.embed_documents(texts)
-
-        vectors = np.array(vectors).astype("float32")
-
-        dimension = vectors.shape[1]
-
-        self.index = faiss.IndexFlatIP(dimension)
-
-        self.index.add(vectors)
-
-    def search(self, question: str, k: int = 3):
-
-        query_vector = self.embedding_service.embed_query(question)
-
-        query_vector = np.array(
-            [query_vector]
-        ).astype("float32")
-
-        scores, indices = self.index.search(
-            query_vector,
-            k
+        self.vector_service = (
+            vector_service
         )
 
-        results = []
+        self.embedding_service = (
+            embedding_service
+        )
 
-        for score, index in zip(scores[0], indices[0]):
+        self.reranker_service = (
+            reranker_service
+        )
 
-            if index == -1:
-                continue
+        self.query_service = (
+            query_service
+        )
 
-            result = self.chunks[index].copy()
+        self.score_threshold = 0.45
 
-            result["score"] = float(score)
+        self.initial_limit = 8
 
-            results.append(result)
+    # =====================================================
+    # RETRIEVE
+    # =====================================================
 
-        return results
+    def retrieve(
+        self,
+        question: str,
+        document_id: str,
+    ) -> List[Dict[str, Any]]:
+
+        # -------------------------------------------------
+        # 1. Generate search queries
+        # -------------------------------------------------
+
+        queries = (
+            self.query_service
+            .generate_queries(
+                question
+            )
+        )
+
+        # -------------------------------------------------
+        # 2. Search with every query
+        # -------------------------------------------------
+
+        all_candidates = []
+
+        for query in queries:
+
+            query_vector = (
+                self.embedding_service
+                .embed_query(
+                    query
+                )
+            )
+
+            results = (
+                self.vector_service.search(
+
+                    query_vector=
+                        query_vector,
+
+                    limit=
+                        self.initial_limit,
+
+                    document_id=
+                        document_id,
+                )
+            )
+
+            for result in results:
+
+                payload = (
+                    result.payload
+                    or {}
+                )
+
+                text = payload.get(
+                    "text",
+                    ""
+                )
+
+                if not text.strip():
+
+                    continue
+
+                all_candidates.append({
+
+                    "text": text,
+
+                    "score":
+                        float(
+                            result.score
+                        ),
+
+                    "document_id":
+                        payload.get(
+                            "document_id"
+                        ),
+
+                    "filename":
+                        payload.get(
+                            "filename"
+                        ),
+
+                    "page":
+                        payload.get(
+                            "page"
+                        ),
+
+                    "chunk_index":
+                        payload.get(
+                            "chunk_index"
+                        ),
+
+                    "search_query":
+                        query,
+                })
+
+        # -------------------------------------------------
+        # 3. Remove low-score results
+        # -------------------------------------------------
+
+        filtered = [
+
+            candidate
+
+            for candidate
+            in all_candidates
+
+            if candidate["score"]
+            >= self.score_threshold
+        ]
+
+        # -------------------------------------------------
+        # 4. Remove duplicate chunks
+        # -------------------------------------------------
+
+        unique_chunks = {}
+
+        for candidate in filtered:
+
+            key = (
+
+                candidate.get(
+                    "document_id"
+                ),
+
+                candidate.get(
+                    "chunk_index"
+                ),
+
+                candidate.get(
+                    "page"
+                ),
+
+                candidate.get(
+                    "text"
+                ),
+            )
+
+            existing = (
+                unique_chunks.get(
+                    key
+                )
+            )
+
+            if (
+                existing is None
+                or candidate["score"]
+                > existing["score"]
+            ):
+
+                unique_chunks[key] = (
+                    candidate
+                )
+
+        unique_candidates = list(
+            unique_chunks.values()
+        )
+
+        # -------------------------------------------------
+        # 5. Rerank
+        # -------------------------------------------------
+
+        reranked = (
+            self.reranker_service
+            .rerank(
+
+                question=
+                    question,
+
+                chunks=
+                    unique_candidates,
+            )
+        )
+
+        return reranked
