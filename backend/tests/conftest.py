@@ -15,9 +15,6 @@ from app.database import (
 from app.config import settings
 
 from app.models.user import User
-from app.models.document import Document
-from app.models.conversation import Conversation
-from app.models.message import Message
 
 from app.security import hash_password
 
@@ -91,7 +88,6 @@ def db():
     finally:
 
         session.rollback()
-
         session.close()
 
 
@@ -130,14 +126,38 @@ def client(db):
 @pytest.fixture
 def test_user(db):
 
+    email = "testuser@example.com"
+
     password = "TestPassword123!"
 
     password_hash = hash_password(
         password
     )
 
+    # -----------------------------------------
+    # Remove existing test user
+    # -----------------------------------------
+
+    existing_user = (
+        db.query(User)
+        .filter(
+            User.email == email
+        )
+        .first()
+    )
+
+    if existing_user:
+
+        db.delete(existing_user)
+
+        db.commit()
+
+    # -----------------------------------------
+    # Create test user
+    # -----------------------------------------
+
     user = User(
-        email="testuser@example.com",
+        email=email,
         name="Test User",
         password_hash=password_hash
     )
@@ -148,10 +168,18 @@ def test_user(db):
 
     db.refresh(user)
 
-    return {
+    yield {
         "user": user,
         "password": password
     }
+
+    # -----------------------------------------
+    # Cleanup after test
+    # -----------------------------------------
+
+    db.delete(user)
+
+    db.commit()
 
 
 # =========================================================
@@ -178,10 +206,6 @@ def authenticated_client(
         get_db
     ] = override_get_db
 
-    password = test_user["password"]
-
-    login_response = None
-
     with TestClient(app) as test_client:
 
         login_response = test_client.post(
@@ -191,7 +215,7 @@ def authenticated_client(
                     test_user["user"].email,
 
                 "password":
-                    password
+                    test_user["password"]
             }
         )
 
